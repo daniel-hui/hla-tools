@@ -53,21 +53,22 @@ def compare(alist):
       counter += 1
   return ret_str, ret_list
 
-def collapse(file):
-  filtered_path = os.path.join(file)
+
+
+def collapse(filename):
+  filtered_path = os.path.join(filename)
   higher_res_alleles = list()
   extended_alleles_dict = defaultdict(list)
 
-  with open(filtered_path) as file:
-    reader = csv.reader(file, delimiter=" ")
+  with open(filtered_path) as filename:
+    reader = csv.reader(filename, delimiter=" ")
     higher_res_alleles.extend(next(reader))
 
   line_no = 2 # start line for each extended allele
   for allele in higher_res_alleles:
-    with open(filtered_path) as file:
-      reader = csv.reader(file, delimiter=" ")
-      for row in itertools.islice(reader, line_no, None,
-        len(higher_res_alleles)+1):
+    with open(filtered_path) as filename:
+      reader = csv.reader(filename, delimiter=" ")
+      for row in itertools.islice(reader, line_no, None, len(higher_res_alleles)+1):
         # tentative fix to `|` bug
         # delete them \m/ \m/ \m/ \m/
         list_val = filter(None, row[2:])
@@ -138,8 +139,53 @@ def collapse(file):
 
 
 
+spatial_counter = 0
+def search_across():
+  total_disagreements = 0
+  total_disag_alleles = defaultdict(list)
+  global spatial_counter
+  for key in disagreements_dict.iterkeys():
+    total_disag_alleles[key].append(0)
+
+  for i in range(0, 43):
+    for j in range(0, 10):
+      collapsed_diffs_list = list()
+      for k in collapsed_alleles_dict.iteritems():
+        try:
+          # print k[1][i][j]
+          collapsed_diffs_list.append(k[1][i][j])
+        except IndexError:
+          pass
+
+      a, b = compare(collapsed_diffs_list)
+
+      # print collapsed characters if non-empty list
+      if len(b) > 0:
+        print "ORIG: ", b, i, j
+        total_disagreements += len(b)
+        coordinate(b, spatial_counter)
+
+      # print the diff disagreements
+      for k, v in disagreements_dict.iteritems():
+        for item in v:
+          try:
+            if item[-2] == i and item[-1] == j:
+              print "DIFF: ", item, k
+              total_disag_alleles[k][0] = (total_disag_alleles[k][0] + 1)
+          except TypeError:
+            pass
+
+      spatial_counter += 10
+
+  print "Total character disagreements: ", total_disagreements
+  print "Ranking of disagreeing alleles: ", total_disag_alleles
+
+
+
+
 coding_mapped = list()
 # to codons preserving allele data via coords
+# gets position of coding sequence -- the bases within "|"
 def get_sequence_coords(first_file):
  
   print("\n\n###########################")
@@ -154,14 +200,14 @@ def get_sequence_coords(first_file):
   nuc_list = list()
   coords = list()
 
-  with open(file_path) as file:
-    reader = csv.reader(file, delimiter=" ")
+  with open(file_path) as filename:
+    reader = csv.reader(filename, delimiter=" ")
     higher_res_alleles.extend(next(reader))
 
   step = len(higher_res_alleles) + 1
 
-  with open(file_path) as file:
-    reader = csv.reader(file, delimiter=" ")
+  with open(file_path) as filename:
+    reader = csv.reader(filename, delimiter=" ")
     cnt = 0
 
     for row in itertools.islice(reader, line_start, None, step):
@@ -222,6 +268,24 @@ def get_sequence_coords(first_file):
   for i in coding_mapped:
     print list(i)
 
+
+
+spatial_list = list()
+def coordinate(char_list, spc):
+  for item in char_list:
+    try:
+      if spc > 0:
+        # print spatial_counter, item[-1]
+        # print (int(spatial_counter) + int(item[-1]))
+        spatial_list.append(int(spc) + int(item[-1]))
+      else:
+        spatial_list.append(int(spc) + int(item[-1]))
+    except TypeError:
+      pass
+
+
+
+#using positions from get_sequence_coords(), map the bases/codons within this region to amino acid
 def map_coding_to_dicts():
   print("\n\n###########################")
   print("## Map coding to dicts() ##")
@@ -296,59 +360,10 @@ def map_coding_to_dicts():
         print val
     c += 1
 
-spatial_counter = 0
-def search_across():
-  total_disagreements = 0
-  total_disag_alleles = defaultdict(list)
-  global spatial_counter
-  for key in disagreements_dict.iterkeys():
-    total_disag_alleles[key].append(0)
 
-  for i in range(0, 43):
-    for j in range(0, 10):
-      collapsed_diffs_list = list()
-      for k in collapsed_alleles_dict.iteritems():
-        try:
-          # print k[1][i][j]
-          collapsed_diffs_list.append(k[1][i][j])
-        except IndexError:
-          pass
 
-      a, b = compare(collapsed_diffs_list)
 
-      # print collapsed characters if non-empty list
-      if len(b) > 0:
-        print "ORIG: ", b, i, j
-        total_disagreements += len(b)
-        coordinate(b, spatial_counter)
 
-      # print the diff disagreements
-      for k, v in disagreements_dict.iteritems():
-        for item in v:
-          try:
-            if item[-2] == i and item[-1] == j:
-              print "DIFF: ", item, k
-              total_disag_alleles[k][0] = (total_disag_alleles[k][0] + 1)
-          except TypeError:
-            pass
-
-      spatial_counter += 10
-
-  print "Total character disagreements: ", total_disagreements
-  print "Ranking of disagreeing alleles: ", total_disag_alleles
-
-spatial_list = list()
-def coordinate(char_list, spc):
-  for item in char_list:
-    try:
-      if spc > 0:
-        # print spatial_counter, item[-1]
-        # print (int(spatial_counter) + int(item[-1]))
-        spatial_list.append(int(spc) + int(item[-1]))
-      else:
-        spatial_list.append(int(spc) + int(item[-1]))
-    except TypeError:
-      pass
 
 codons = {
   "CAT": "H", "CAC": "H", "CAA": "Q", "CAG": "Q",
