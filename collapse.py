@@ -54,7 +54,7 @@ def compare(alist):
   return ret_str, ret_list
 
 
-
+#this function finds the differences between input files
 def collapse(filename):
   filtered_path = os.path.join(filename)
   higher_res_alleles = list()
@@ -186,11 +186,12 @@ def search_across():
 coding_mapped = list()
 # to codons preserving allele data via coords
 # gets position of coding sequence -- the bases within "|"
-def get_sequence_coords(first_file):
+# this region will be the same for all a*.txt alleles, and all b*.txt alleles
+def get_protein_sequence_coords(first_file):
  
-  print("\n\n###########################")
-  print("## get sequence coords() ##")
-  print("###########################")
+  print("\n\n###########################################################")
+  print("## get protein coding sequence coordinates of first file ##")
+  print("###########################################################")
 
   line_start = 1 # start line for each extended allele
   file_path = os.path.join(first_file)
@@ -266,7 +267,8 @@ def get_sequence_coords(first_file):
   coding_mapped = zip(coding_region, coords_array)
 
   for i in coding_mapped:
-    print list(i)
+    print list(i), "start-end, [row, column, block index]"
+
 
 
 
@@ -285,7 +287,7 @@ def coordinate(char_list, spc):
 
 
 
-#using positions from get_sequence_coords(), map the bases/codons within this region to amino acid
+#using positions from get_protein_sequence_coords(), map the bases/codons within this region to amino acid
 def map_coding_to_dicts():
   print("\n\n###########################")
   print("## Map coding to dicts() ##")
@@ -303,7 +305,7 @@ def map_coding_to_dicts():
   for region in coding_mapped:
     for item in region:
       if type(item) == list:
-        print item
+        print item # this prints out each coding region 
 
         # NEW NEW EXPERIMENT --------------------------------- START
         for i in range(0, 43):
@@ -419,7 +421,9 @@ def print_dict(adict):
 
 
 
-# call functions, print the results
+### call functions, print the results
+
+#this finds the disagreements between input files
 for file in filenames:
   collapse(file)
 
@@ -430,5 +434,5 @@ print "================================"
 search_across()
 print "Absolute position for each disagreement:", spatial_list
 # print "Aminoacid sequence:", read_amino()
-get_sequence_coords(filenames[0])
+get_protein_sequence_coords(filenames[0])
 map_coding_to_dicts()
