@@ -29,6 +29,10 @@ else:
 # gen_file = sys.argv[3]
 # gen_path = os.path.join(gen_file)
 
+numRows = 43
+if(sys.argv[1].startswith("a")):
+	numRows=38
+
 collapsed_alleles_dict = defaultdict(list)
 disagreements_dict = defaultdict(list)
 
@@ -55,6 +59,7 @@ def compare(alist):
 
 
 #this function finds the differences between input files
+#collapses higher res alleles together -- notes where there are disagreements ("#")
 def collapse(filename):
   filtered_path = os.path.join(filename)
   higher_res_alleles = list()
@@ -99,7 +104,7 @@ def collapse(filename):
   same_snp = list()
   counter = 0
 
-  for i in range(0, 43): # replace ints with len(max) calls
+  for i in range(0, numRows): # replace ints with len(max) calls
     for j in range(0, 10): # replace ints with len(max) calls
       templist = list()
       for k in extended_alleles_dict.iteritems():
@@ -147,7 +152,7 @@ def search_across():
   for key in disagreements_dict.iterkeys():
     total_disag_alleles[key].append(0)
 
-  for i in range(0, 43):
+  for i in range(0, numRows):
     for j in range(0, 10):
       collapsed_diffs_list = list()
       for k in collapsed_alleles_dict.iteritems():
@@ -293,75 +298,83 @@ def map_coding_to_dicts():
   print("## Map coding to dicts() ##")
   print("###########################")
   
-  temp_dict = defaultdict(list)
+  temp_dict = {}
   exon_dict = defaultdict(list)
 
-  keylist = list()
-  for k in collapsed_alleles_dict.iterkeys():
-    keylist.append(k)
-
-  print " "
-  alleleslist = list()
+  print "Each coding region: "
   for region in coding_mapped:
-    for item in region:
-      if type(item) == list:
-        print item # this prints out each coding region 
+    print region[1] # this prints out each coding region 
+    item=region[1]
 
-        # NEW NEW EXPERIMENT --------------------------------- START
-        for i in range(0, 43):
-          if i >= item[0][0] and i <= item[1][0]:
-            for k in keylist:
-              if i == item[0][0]: # start
-                for j in range(0, 10):
-                  if j == item[0][1][0]: # first block
-                    for idx, cr in enumerate(collapsed_alleles_dict[k][i][j]):
-                      if idx >= j:
-                        temp_dict[k].append(cr)
-                  elif j > item[0][1][0]:
-                    for idx, cr in enumerate(collapsed_alleles_dict[k][i][j]):
-                      temp_dict[k].append(cr)
-              elif i == item[1][0]: # end
-                for j in range(0, 10):
-                  if j == item[1][1][0]: # last block
-                    for idx, cr in enumerate(collapsed_alleles_dict[k][i][j]):
-                      if idx <= j:
-                        temp_dict[k].append(cr)
-                  elif j <= item[1][1][0]:
-                    for idx, cr in enumerate(collapsed_alleles_dict[k][i][j]):
-                      temp_dict[k].append(cr)
-              else: # whole blocks
-                for j in range(0, 10):
-                  for idx, cr in enumerate(collapsed_alleles_dict[k][i][j]):
-                    temp_dict[k].append(cr)
+    startrow=item[0][0]
+    startblock=item[0][1][0]
+    startind=item[0][1][1]
 
-        # NEW NEW EXPERIMENT --------------------------------- END
-        for k, v in temp_dict.iteritems():
-          temp_dict[k].append("|")
+    endrow=item[1][0]
+    endblock=item[1][1][0]
+    endind=item[1][1][1]
 
+#    print startrow, startblock, startind
+#    print endrow, endblock, endind
+
+    # NEW NEW EXPERIMENT --------------------------------- START
+    for allele in collapsed_alleles_dict.iterkeys(): #for each allele
+      if(allele not in temp_dict):
+        temp_dict[allele] = ""
+      for row in range(startrow, endrow + 1): #for each row
+        for block in range(0, 10): #for each block
+          for idx, ca in enumerate(collapsed_alleles_dict[allele][row][block]): #for each collapsed allele (enumerated)
+            if( (row == startrow == endrow and startblock <= block <= endblock)): #i think this should work so long as startrow != endrow and startblock != endblock (coding region is only within one block)
+              if(block == startblock and idx >= startind):
+                temp_dict[allele] += ca
+              elif(block == endblock and idx < endind): 
+                temp_dict[allele] += ca
+              elif (block != startblock and block != endblock):
+                temp_dict[allele] += ca
+            elif(row == startrow != endrow and startblock <= block): #if block == startblock and startblock != endblock
+              if(startblock == block and idx >= startind):
+                temp_dict[allele] += ca
+              elif(startblock != block):
+                temp_dict[allele] += ca
+            elif(row == endrow != startrow and endblock >= block): #if block == endblock and endblock != startblock
+              if(endblock == block and idx < endind):
+                temp_dict[allele] += ca
+              elif(endblock != block):
+                temp_dict[allele] += ca
+            elif(startrow < row < endrow): #between start and end
+              temp_dict[allele] += ca
+
+      temp_dict[allele] += "|"
+      # NEW NEW EXPERIMENT --------------------------------- END
   print " "
-  for region in coding_mapped:
-    for k2, v2 in temp_dict.iteritems():
-      # print k2, v2
-      exon_dict[region[0]].append(v2)
 
+
+
+  for i in range(len(coding_mapped)):
+    ref_bases = coding_mapped[i][0]
+    print "Reference : ", ref_bases, "LEN:", len(ref_bases)
+    for allele in temp_dict:
+
+      collapsed = temp_dict[allele].split("|")
+      print allele, ": ", collapsed[i], "LEN:", len(collapsed[i])
+    print
   # print_dict(exon_dict)
 
-  print " "
-  c = 0
-  for k, v in exon_dict.iteritems():
-    t_list = list("".join(v[0]).replace(".", "").split("|"))
-    t_list2 = list("".join(v[1]).replace(".", "").split("|"))
-    print k, len(k), "LEN"
-    # print t_list
-    # print t_list2
-    for index, val in enumerate(t_list):
-      if index == c:
-        print val
-    for index, val in enumerate(t_list2):
-      if index == c:
-        print val
-    c += 1
-
+#  print " "
+#  c = 0
+#  for k, v in exon_dict.iteritems():
+#    t_list = list("".join(v[0]).replace(".", "").split("|"))
+#    t_list2 = list("".join(v[1]).replace(".", "").split("|"))
+#    print k, len(k), "LEN"
+#    # print t_list
+#    # print t_list2
+#    for index, val in enumerate(t_list):
+#      if index == c:
+#        print val
+#    for index, val in enumerate(t_list2):
+#      if index == c:
+#        print val
+#    c += 1
 
 
 
