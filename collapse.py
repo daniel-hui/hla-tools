@@ -200,8 +200,7 @@ def get_protein_sequence_coords(first_file):
 
   line_start = 1 # start line for each extended allele
   file_path = os.path.join(first_file)
-
-
+  
   higher_res_alleles = list()
   nuc_list = list()
   coords = list()
@@ -250,7 +249,8 @@ def get_protein_sequence_coords(first_file):
         pass
       cnt += 1
 
-  nucseq = "".join(map("".join, nuc_list)).replace(".", "").split("|")
+#  nucseq = "".join(map("".join, nuc_list)).replace(".", "").split("|")
+  nucseq = "".join(map("".join, nuc_list)).split("|")
   coding_region = nucseq[1::2]
 
   flat_list = list()
@@ -267,6 +267,16 @@ def get_protein_sequence_coords(first_file):
   for index, obj in enumerate(flat_list):
     if index % 2 == 0:
       coords_array.append([flat_list[index], flat_list[index+1]])
+
+
+  #the coding regions all seem to be correct, but coords_array is not eg. 
+  #TGTGA
+  #[[33, [1, 0]], [33, [2, 5]]] -- this is 15 not 5, but should be 5
+  #quick hack
+  for coord in coords_array:
+    if(coord[0][0] == coord[1][0]):
+      if(coord[1][1][0] == coord[0][1][0] + 1):
+        coord[1][1][0] = coord[1][1][0] - 1
 
   global coding_mapped
   coding_mapped = zip(coding_region, coords_array)
@@ -299,7 +309,7 @@ def map_coding_to_dicts():
   print("###########################")
   
   temp_dict = {}
-  exon_dict = defaultdict(list)
+#  exon_dict = defaultdict(list)
 
   print "Each coding region: "
   for region in coding_mapped:
@@ -314,9 +324,6 @@ def map_coding_to_dicts():
     endblock=item[1][1][0]
     endind=item[1][1][1]
 
-#    print startrow, startblock, startind
-#    print endrow, endblock, endind
-
     # NEW NEW EXPERIMENT --------------------------------- START
     for allele in collapsed_alleles_dict.iterkeys(): #for each allele
       if(allele not in temp_dict):
@@ -324,10 +331,12 @@ def map_coding_to_dicts():
       for row in range(startrow, endrow + 1): #for each row
         for block in range(0, 10): #for each block
           for idx, ca in enumerate(collapsed_alleles_dict[allele][row][block]): #for each collapsed allele (enumerated)
-            if( (row == startrow == endrow and startblock <= block <= endblock)): #i think this should work so long as startrow != endrow and startblock != endblock (coding region is only within one block)
-              if(block == startblock and idx >= startind):
+            if( row == startrow == endrow and startblock <= block <= endblock): #if startrow == endrow
+              if(block == startblock == endblock and startind <= idx < endind):
                 temp_dict[allele] += ca
-              elif(block == endblock and idx < endind): 
+              elif(block == startblock != endblock and idx >= startind):
+                temp_dict[allele] += ca
+              elif(block == endblock != startblock and idx < endind): 
                 temp_dict[allele] += ca
               elif (block != startblock and block != endblock):
                 temp_dict[allele] += ca
@@ -358,25 +367,6 @@ def map_coding_to_dicts():
       collapsed = temp_dict[allele].split("|")
       print allele, ": ", collapsed[i], "LEN:", len(collapsed[i])
     print
-  # print_dict(exon_dict)
-
-#  print " "
-#  c = 0
-#  for k, v in exon_dict.iteritems():
-#    t_list = list("".join(v[0]).replace(".", "").split("|"))
-#    t_list2 = list("".join(v[1]).replace(".", "").split("|"))
-#    print k, len(k), "LEN"
-#    # print t_list
-#    # print t_list2
-#    for index, val in enumerate(t_list):
-#      if index == c:
-#        print val
-#    for index, val in enumerate(t_list2):
-#      if index == c:
-#        print val
-#    c += 1
-
-
 
 
 
